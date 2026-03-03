@@ -1,0 +1,109 @@
+swagger: '2.0'
+info:
+  description: Real-Time Shuttle Tracking API
+  version: 1.0.0
+  title: Shuttle Tracking API
+host: localhost:8080
+basePath: /api/v1
+schemes:
+  - http
+  - https
+paths:
+  /organizations:
+    post:
+      summary: Create a new organization
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/Organization'
+      responses:
+        '201':
+          description: Organization created successfully
+        '400':
+          description: Invalid input
+  /organizations/{orgId}:
+    get:
+      summary: Get organization details
+      parameters:
+        - name: orgId
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Organization details
+          schema:
+            $ref: '#/definitions/Organization'
+        '404':
+          description: Organization not found
+  /trips:
+    post:
+      summary: Start a new trip
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/Trip'
+      responses:
+        '201':
+          description: Trip started successfully
+        '400':
+          description: Invalid input
+  /trips/{tripId}/location:
+    post:
+      summary: Update trip location
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/LocationUpdate'
+      responses:
+        '200':
+          description: Location updated successfully
+        '404':
+          description: Trip not found
+definitions:
+  Organization:
+    type: object
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      created_at:
+        type: string
+        format: date-time
+  Trip:
+    type: object
+    properties:
+      id:
+        type: string
+      driver_id:
+        type: string
+      route_id:
+        type: string
+      status:
+        type: string
+      created_at:
+        type: string
+        format: date-time
+  LocationUpdate:
+    type: object
+    properties:
+      latitude:
+        type: number
+        format: float
+      longitude:
+        type: number
+        format: float
+      timestamp:
+        type: string
+        format: date-time
