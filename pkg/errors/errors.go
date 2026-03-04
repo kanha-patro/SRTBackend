@@ -28,3 +28,24 @@ func Is(err error, code int) bool {
 	}
 	return false
 }
+
+// Convenience constructors for common HTTP-style errors.
+func NewNotFoundError(message string) error {
+	return New(404, message)
+}
+
+func NewUnauthorizedError(message string) error {
+	return New(401, message)
+}
+
+func NewInvalidStateError(message string) error {
+	return New(409, message)
+}
+
+func NewInternalServerError(message string) error {
+	return New(500, message)
+}
+
+func NewBadRequestError(message string) error {
+	return New(400, message)
+}

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
-	"gorm.io/gorm"
 	"github.com/akpatri/srt/internal/domain"
+	"gorm.io/gorm"
 )
 
 // Migrate performs the database migrations.

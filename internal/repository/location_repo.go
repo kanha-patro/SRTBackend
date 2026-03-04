@@ -8,12 +8,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type LocationRepository interface {
-	SaveLocation(ctx context.Context, location *domain.Location) error
-	GetLatestLocationByTripID(ctx context.Context, tripID string) (*domain.Location, error)
-	GetLocationsByTripID(ctx context.Context, tripID string, startTime time.Time, endTime time.Time) ([]domain.Location, error)
-}
-
 type locationRepository struct {
 	db *gorm.DB
 }
@@ -42,6 +36,20 @@ func (r *locationRepository) GetLocationsByTripID(ctx context.Context, tripID st
 	var locations []domain.Location
 	err := r.db.WithContext(ctx).
 		Where("trip_id = ? AND timestamp BETWEEN ? AND ?", tripID, startTime, endTime).
+		Find(&locations).Error
+	if err != nil {
+		return nil, err
+	}
+	return locations, nil
+}
+
+func (r *locationRepository) FindActiveLocations(ctx context.Context, orgID string) ([]domain.Location, error) {
+	// join trips and locations to get latest location per active trip for the org
+	var locations []domain.Location
+	sub := r.db.WithContext(ctx).Table("trips").Select("id").Where("org_id = ? AND state = ?", orgID, "ACTIVE")
+	err := r.db.WithContext(ctx).
+		Where("trip_id IN (?)", sub).
+		Order("timestamp DESC").
 		Find(&locations).Error
 	if err != nil {
 		return nil, err

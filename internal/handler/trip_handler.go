@@ -3,10 +3,11 @@ package handler
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
-	"github.com/akpatri/srt/internal/service"
 	"github.com/akpatri/srt/internal/domain"
 	"github.com/akpatri/srt/internal/observability"
+	"github.com/akpatri/srt/internal/service"
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type TripHandler struct {
@@ -23,16 +24,15 @@ func NewTripHandler(tripService service.TripService, logger observability.Logger
 
 // StartTrip handles the request to start a trip
 func (h *TripHandler) StartTrip(c *gin.Context) {
-	var request domain.StartTripRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
-		h.logger.Error("Failed to bind JSON", err)
+	var trip domain.Trip
+	if err := c.ShouldBindJSON(&trip); err != nil {
+		h.logger.Error("Failed to bind JSON", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	trip, err := h.tripService.StartTrip(request)
-	if err != nil {
-		h.logger.Error("Failed to start trip", err)
+	if err := h.tripService.StartTrip(c.Request.Context(), &trip); err != nil {
+		h.logger.Error("Failed to start trip", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start trip"})
 		return
 	}
@@ -42,16 +42,20 @@ func (h *TripHandler) StartTrip(c *gin.Context) {
 
 // UpdateLocation handles the request to update the driver's location
 func (h *TripHandler) UpdateLocation(c *gin.Context) {
-	var request domain.UpdateLocationRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
-		h.logger.Error("Failed to bind JSON", err)
+	// Expect payload: { "trip_id": "...", "location": { ... } }
+	var payload struct {
+		TripID   string          `json:"trip_id"`
+		Location domain.Location `json:"location"`
+	}
+
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		h.logger.Error("Failed to bind JSON", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	err := h.tripService.UpdateLocation(request)
-	if err != nil {
-		h.logger.Error("Failed to update location", err)
+	if err := h.tripService.UpdateLocation(c.Request.Context(), payload.TripID, &payload.Location); err != nil {
+		h.logger.Error("Failed to update location", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update location"})
 		return
 	}
@@ -61,16 +65,18 @@ func (h *TripHandler) UpdateLocation(c *gin.Context) {
 
 // EndTrip handles the request to end a trip
 func (h *TripHandler) EndTrip(c *gin.Context) {
-	var request domain.EndTripRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
-		h.logger.Error("Failed to bind JSON", err)
+	var payload struct {
+		TripID string `json:"trip_id"`
+	}
+
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		h.logger.Error("Failed to bind JSON", zap.Error(err))
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	err := h.tripService.EndTrip(request)
-	if err != nil {
-		h.logger.Error("Failed to end trip", err)
+	if err := h.tripService.EndTrip(c.Request.Context(), payload.TripID); err != nil {
+		h.logger.Error("Failed to end trip", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to end trip"})
 		return
 	}
@@ -80,9 +86,9 @@ func (h *TripHandler) EndTrip(c *gin.Context) {
 
 // GetActiveTrips handles the request to get all active trips
 func (h *TripHandler) GetActiveTrips(c *gin.Context) {
-	trips, err := h.tripService.GetActiveTrips()
+	trips, err := h.tripService.GetActiveTrips(c.Request.Context())
 	if err != nil {
-		h.logger.Error("Failed to get active trips", err)
+		h.logger.Error("Failed to get active trips", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get active trips"})
 		return
 	}

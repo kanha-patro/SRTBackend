@@ -16,8 +16,6 @@ type Route struct {
 	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
-
-
 // NewRoute creates a new Route instance.
 func NewRoute(orgID uuid.UUID, name string) *Route {
 	return &Route{

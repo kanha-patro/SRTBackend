@@ -29,3 +29,8 @@ func (ep *EventPublisher) Publish(subject string, data interface{}) error {
 
 	return nil
 }
+
+// Publisher is the minimal interface for publishing events.
+type Publisher interface {
+	Publish(subject string, data interface{}) error
+}

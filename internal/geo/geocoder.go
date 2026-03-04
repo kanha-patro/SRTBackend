@@ -17,7 +17,7 @@ type GeocodeResponse struct {
 
 type GeocodeResult struct {
 	FormattedAddress string `json:"formatted_address"`
-	Geometry        struct {
+	Geometry         struct {
 		Location struct {
 			Lat float64 `json:"lat"`
 			Lng float64 `json:"lng"`

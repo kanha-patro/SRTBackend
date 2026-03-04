@@ -3,9 +3,9 @@ package handler
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
-	"github.com/akpatri/srt/internal/service"
 	"github.com/akpatri/srt/internal/domain"
+	"github.com/akpatri/srt/internal/service"
+	"github.com/gin-gonic/gin"
 )
 
 // OrgHandler handles organization-related HTTP requests

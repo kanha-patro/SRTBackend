@@ -1,6 +1,7 @@
 package trip
 
 import (
+	"context"
 	"time"
 
 	"github.com/akpatri/srt/internal/domain"
@@ -9,15 +10,15 @@ import (
 )
 
 type TripLifecycle struct {
-	tripRepo      repository.TripRepository
-	locationRepo  repository.LocationRepository
+	tripRepo       repository.TripRepository
+	locationRepo   repository.LocationRepository
 	eventPublisher event.Publisher
 }
 
 func NewTripLifecycle(tripRepo repository.TripRepository, locationRepo repository.LocationRepository, eventPublisher event.Publisher) *TripLifecycle {
 	return &TripLifecycle{
-		tripRepo:      tripRepo,
-		locationRepo:  locationRepo,
+		tripRepo:       tripRepo,
+		locationRepo:   locationRepo,
 		eventPublisher: eventPublisher,
 	}
 }
@@ -26,11 +27,11 @@ func (tl *TripLifecycle) StartTrip(trip *domain.Trip) error {
 	trip.State = domain.TripStateStarted
 	trip.StartedAt = time.Now()
 
-	if err := tl.tripRepo.Save(trip); err != nil {
+	if err := tl.tripRepo.UpdateTrip(context.Background(), trip); err != nil {
 		return err
 	}
 
-	tl.eventPublisher.Publish(event.TripStarted{TripID: trip.ID})
+	_ = tl.eventPublisher.Publish("trip.started", event.TripStarted{Event: event.Event{Timestamp: time.Now(), Type: "TripStarted"}, TripID: trip.ID})
 	return nil
 }
 
@@ -42,11 +43,11 @@ func (tl *TripLifecycle) ActivateTrip(trip *domain.Trip) error {
 	trip.State = domain.TripStateActive
 	trip.ActivatedAt = time.Now()
 
-	if err := tl.tripRepo.Save(trip); err != nil {
+	if err := tl.tripRepo.UpdateTrip(context.Background(), trip); err != nil {
 		return err
 	}
 
-	tl.eventPublisher.Publish(event.TripActivated{TripID: trip.ID})
+	_ = tl.eventPublisher.Publish("trip.activated", event.TripActivated{Event: event.Event{Timestamp: time.Now(), Type: "TripActivated"}, TripID: trip.ID})
 	return nil
 }
 
@@ -58,11 +59,11 @@ func (tl *TripLifecycle) EndTrip(trip *domain.Trip) error {
 	trip.State = domain.TripStateEnded
 	trip.EndedAt = time.Now()
 
-	if err := tl.tripRepo.Save(trip); err != nil {
+	if err := tl.tripRepo.UpdateTrip(context.Background(), trip); err != nil {
 		return err
 	}
 
-	tl.eventPublisher.Publish(event.TripEnded{TripID: trip.ID})
+	_ = tl.eventPublisher.Publish("trip.ended", event.TripAutoEnded{Event: event.Event{Timestamp: time.Now(), Type: "TripEnded"}, TripID: trip.ID})
 	return nil
 }
 
@@ -71,11 +72,11 @@ func (tl *TripLifecycle) AutoEndTrip(trip *domain.Trip) error {
 		trip.State = domain.TripStateEnded
 		trip.EndedAt = time.Now()
 
-		if err := tl.tripRepo.Save(trip); err != nil {
+		if err := tl.tripRepo.UpdateTrip(context.Background(), trip); err != nil {
 			return err
 		}
 
-		tl.eventPublisher.Publish(event.TripAutoEnded{TripID: trip.ID})
+		_ = tl.eventPublisher.Publish("trip.autoended", event.TripAutoEnded{Event: event.Event{Timestamp: time.Now(), Type: "TripAutoEnded"}, TripID: trip.ID})
 	}
 	return nil
 }

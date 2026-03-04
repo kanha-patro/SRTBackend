@@ -3,9 +3,10 @@ package handler
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
-	"github.com/akpatri/srt/internal/service"
 	"github.com/akpatri/srt/internal/observability"
+	"github.com/akpatri/srt/internal/service"
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type UserHandler struct {
@@ -28,7 +29,7 @@ func (h *UserHandler) GetActiveShuttles(c *gin.Context) {
 
 	activeShuttles, err := h.userService.GetActiveShuttles(orgCode, routeCode, nearbyLocation)
 	if err != nil {
-		h.logger.Error("Failed to retrieve active shuttles", err)
+		h.logger.Error("Failed to retrieve active shuttles", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve active shuttles"})
 		return
 	}

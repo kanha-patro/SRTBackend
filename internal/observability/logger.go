@@ -46,3 +46,13 @@ func (l *zapLogger) Fatal(msg string, fields ...zap.Field) {
 func (l *zapLogger) Sync() error {
 	return l.logger.Sync()
 }
+
+// LogError is a convenience helper used by handlers during early development.
+// It prints the error using the standard logger; replace with structured logging where available.
+func LogError(err error) {
+	if err == nil {
+		return
+	}
+	// Best-effort simple logging to stderr when a logger instance isn't available.
+	zap.NewExample().Sugar().Error(err.Error())
+}

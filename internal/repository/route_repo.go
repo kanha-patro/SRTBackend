@@ -5,14 +5,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type RouteRepository interface {
-	CreateRoute(route *domain.Route) error
-	GetRouteByID(id string) (*domain.Route, error)
-	UpdateRoute(route *domain.Route) error
-	DeleteRoute(id string) error
-	GetAllRoutes(orgID string) ([]domain.Route, error)
-}
-
 type routeRepository struct {
 	db *gorm.DB
 }

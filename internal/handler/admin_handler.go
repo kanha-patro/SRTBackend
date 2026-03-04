@@ -3,9 +3,10 @@ package handler
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
-	"github.com/akpatri/srt/internal/service"
 	"github.com/akpatri/srt/internal/observability"
+	"github.com/akpatri/srt/internal/service"
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type AdminHandler struct {
@@ -24,7 +25,7 @@ func NewAdminHandler(orgService service.OrgService, logger observability.Logger)
 func (h *AdminHandler) ApproveOrg(c *gin.Context) {
 	orgID := c.Param("org_id")
 	if err := h.orgService.ApproveOrg(orgID); err != nil {
-		h.logger.Error("Failed to approve organization", err)
+		h.logger.Error("Failed to approve organization", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to approve organization"})
 		return
 	}
@@ -35,7 +36,7 @@ func (h *AdminHandler) ApproveOrg(c *gin.Context) {
 func (h *AdminHandler) SuspendOrg(c *gin.Context) {
 	orgID := c.Param("org_id")
 	if err := h.orgService.SuspendOrg(orgID); err != nil {
-		h.logger.Error("Failed to suspend organization", err)
+		h.logger.Error("Failed to suspend organization", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to suspend organization"})
 		return
 	}
@@ -46,7 +47,7 @@ func (h *AdminHandler) SuspendOrg(c *gin.Context) {
 func (h *AdminHandler) MonitorActiveTrips(c *gin.Context) {
 	trips, err := h.orgService.GetActiveTrips()
 	if err != nil {
-		h.logger.Error("Failed to retrieve active trips", err)
+		h.logger.Error("Failed to retrieve active trips", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve active trips"})
 		return
 	}
@@ -57,7 +58,7 @@ func (h *AdminHandler) MonitorActiveTrips(c *gin.Context) {
 func (h *AdminHandler) ForceStopTrip(c *gin.Context) {
 	tripID := c.Param("trip_id")
 	if err := h.orgService.ForceStopTrip(tripID); err != nil {
-		h.logger.Error("Failed to force stop trip", err)
+		h.logger.Error("Failed to force stop trip", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to force stop trip"})
 		return
 	}
@@ -68,7 +69,7 @@ func (h *AdminHandler) ForceStopTrip(c *gin.Context) {
 func (h *AdminHandler) RevokeOTPSession(c *gin.Context) {
 	sessionID := c.Param("session_id")
 	if err := h.orgService.RevokeOTPSession(sessionID); err != nil {
-		h.logger.Error("Failed to revoke OTP session", err)
+		h.logger.Error("Failed to revoke OTP session", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to revoke OTP session"})
 		return
 	}

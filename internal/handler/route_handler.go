@@ -3,10 +3,10 @@ package handler
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
-	"github.com/akpatri/srt/internal/service"
 	"github.com/akpatri/srt/internal/domain"
+	"github.com/akpatri/srt/internal/service"
 	"github.com/akpatri/srt/pkg/errors"
+	"github.com/gin-gonic/gin"
 )
 
 // RouteHandler handles route-related HTTP requests
@@ -65,7 +65,8 @@ func (h *RouteHandler) DeleteRoute(c *gin.Context) {
 
 // GetRoutes handles fetching all routes
 func (h *RouteHandler) GetRoutes(c *gin.Context) {
-	routes, err := h.routeService.GetAllRoutes()
+	orgID := c.Query("org_id")
+	routes, err := h.routeService.GetAllRoutes(orgID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errors.NewInternalServerError(err.Error()))
 		return
@@ -77,7 +78,7 @@ func (h *RouteHandler) GetRoutes(c *gin.Context) {
 // GetRoute handles fetching a specific route by ID
 func (h *RouteHandler) GetRoute(c *gin.Context) {
 	routeID := c.Param("id")
-	route, err := h.routeService.GetRouteByID(routeID)
+	route, err := h.routeService.GetRoute(routeID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, errors.NewNotFoundError("Route not found"))
 		return

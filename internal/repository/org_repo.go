@@ -5,14 +5,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type OrgRepository interface {
-	Create(org *domain.Org) error
-	GetByID(id string) (*domain.Org, error)
-	Update(org *domain.Org) error
-	Delete(id string) error
-	GetAll() ([]domain.Org, error)
-}
-
 type orgRepository struct {
 	db *gorm.DB
 }

@@ -4,50 +4,40 @@ import (
 	"context"
 	"time"
 
-	"github.com/akpatri/srt/internal/repository"
 	"github.com/akpatri/srt/internal/event"
-	"github.com/akpatri/srt/internal/cache"
 	"github.com/akpatri/srt/internal/observability"
+	"github.com/akpatri/srt/internal/repository"
+	"go.uber.org/zap"
 )
 
 type AutoEndService struct {
-	tripRepo      repository.TripRepository
-	cache         cache.Cache
+	tripRepo       repository.TripRepository
 	eventPublisher event.Publisher
-	logger        observability.Logger
+	logger         observability.Logger
 }
 
-func NewAutoEndService(tripRepo repository.TripRepository, cache cache.Cache, eventPublisher event.Publisher, logger observability.Logger) *AutoEndService {
+func NewAutoEndService(tripRepo repository.TripRepository, eventPublisher event.Publisher, logger observability.Logger) *AutoEndService {
 	return &AutoEndService{
-		tripRepo:      tripRepo,
-		cache:         cache,
+		tripRepo:       tripRepo,
 		eventPublisher: eventPublisher,
-		logger:        logger,
+		logger:         logger,
 	}
 }
 
-func (s *AutoEndService) AutoEndTrips(ctx context.Context) {
-	activeTrips, err := s.tripRepo.GetActiveTrips(ctx)
+func (s *AutoEndService) AutoEndTrips(ctx context.Context, threshold time.Duration) {
+	staleTrips, err := s.tripRepo.GetStaleTrips(ctx, threshold)
 	if err != nil {
-		s.logger.Error("Failed to fetch active trips", err)
+		s.logger.Error("Failed to fetch stale trips", zap.Error(err))
 		return
 	}
 
-	for _, trip := range activeTrips {
-		if s.shouldAutoEndTrip(trip) {
-			err := s.tripRepo.EndTrip(ctx, trip.ID)
-			if err != nil {
-				s.logger.Error("Failed to end trip", err)
-				continue
-			}
-			s.eventPublisher.PublishTripAutoEnded(trip.ID)
+	for _, trip := range staleTrips {
+		trip.EndTime = time.Now()
+		trip.State = "ENDED"
+		if err := s.tripRepo.UpdateTrip(ctx, trip); err != nil {
+			s.logger.Error("Failed to end trip", zap.Error(err))
+			continue
 		}
+		_ = s.eventPublisher.Publish("trip.autoended", event.TripAutoEnded{Event: event.Event{Timestamp: time.Now(), Type: "TripAutoEnded"}, TripID: trip.ID})
 	}
-}
-
-func (s *AutoEndService) shouldAutoEndTrip(trip Trip) bool {
-	lastUpdateTime := trip.LastLocationUpdateTime
-	idleDuration := time.Since(lastUpdateTime)
-
-	return idleDuration > time.Duration(trip.IdleTimeout)*time.Minute
 }

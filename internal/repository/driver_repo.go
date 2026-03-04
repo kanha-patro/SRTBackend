@@ -5,14 +5,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type DriverRepository interface {
-	Create(driver *domain.Driver) error
-	Update(driver *domain.Driver) error
-	Delete(driverID string) error
-	FindByID(driverID string) (*domain.Driver, error)
-	FindAll() ([]domain.Driver, error)
-}
-
 type driverRepository struct {
 	db *gorm.DB
 }

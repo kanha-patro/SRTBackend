@@ -21,9 +21,9 @@ type AuditLog interface {
 // NewAudit creates a new audit log entry.
 func NewAudit(action, actor, targetID string) *Audit {
 	return &Audit{
-		Action:   action,
-		Actor:    actor,
-		TargetID: targetID,
+		Action:    action,
+		Actor:     actor,
+		TargetID:  targetID,
 		CreatedAt: time.Now(),
 	}
 }

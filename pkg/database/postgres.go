@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	_ "github.com/lib/pq" // PostgreSQL driver
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq" // PostgreSQL driver
 	"os"
 )
 
@@ -29,7 +29,6 @@ func Connect() {
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		dbHost, dbPort, dbUser, dbPassword, dbName)
 
-	
 	DB, err = sql.Open("postgres", psqlInfo)
 	if err != nil {
 		log.Fatalf("Error opening database: %v", err)

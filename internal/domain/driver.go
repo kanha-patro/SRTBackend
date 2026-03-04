@@ -35,3 +35,11 @@ func (d *Driver) Validate() error {
 	}
 	return nil
 }
+
+// ValidateOTP checks if the provided OTP matches the driver's bound OTP.
+func (d *Driver) ValidateOTP(code string) bool {
+	if d == nil {
+		return false
+	}
+	return code != "" && code == d.OTP
+}

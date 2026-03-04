@@ -3,11 +3,11 @@ package handler
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
-	"github.com/akpatri/srt/internal/service"
 	"github.com/akpatri/srt/internal/domain"
-	"github.com/akpatri/srt/pkg/errors"
 	"github.com/akpatri/srt/internal/observability"
+	"github.com/akpatri/srt/internal/service"
+	"github.com/akpatri/srt/pkg/errors"
+	"github.com/gin-gonic/gin"
 )
 
 type LocationHandler struct {
@@ -27,7 +27,10 @@ func (h *LocationHandler) UpdateLocation(c *gin.Context) {
 		return
 	}
 
-	if err := h.locationService.UpdateLocation(&location); err != nil {
+	ctx := c.Request.Context()
+	tripID := location.TripID
+
+	if err := h.locationService.UpdateLocation(ctx, tripID, location); err != nil {
 		observability.LogError(err)
 		c.JSON(http.StatusInternalServerError, errors.NewInternalServerError("Failed to update location"))
 		return
@@ -38,7 +41,10 @@ func (h *LocationHandler) UpdateLocation(c *gin.Context) {
 
 // GetActiveLocations retrieves all active locations for users to track.
 func (h *LocationHandler) GetActiveLocations(c *gin.Context) {
-	activeLocations, err := h.locationService.GetActiveLocations()
+	ctx := c.Request.Context()
+	orgID := c.Query("org_id")
+
+	activeLocations, err := h.locationService.GetActiveLocations(ctx, orgID)
 	if err != nil {
 		observability.LogError(err)
 		c.JSON(http.StatusInternalServerError, errors.NewInternalServerError("Failed to retrieve active locations"))

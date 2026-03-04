@@ -2,101 +2,101 @@ package service
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/akpatri/srt/internal/domain"
-	"github.com/akpatri/srt/internal/repository"
 	"github.com/akpatri/srt/internal/event"
 	"github.com/akpatri/srt/internal/observability"
+	"github.com/akpatri/srt/internal/repository"
+	pkgerrors "github.com/akpatri/srt/pkg/errors"
+	"go.uber.org/zap"
 )
 
-type TripService struct {
+type tripServiceImpl struct {
 	tripRepo       repository.TripRepository
 	locationRepo   repository.LocationRepository
-	eventPublisher  event.Publisher
+	eventPublisher event.Publisher
 	logger         observability.Logger
 }
 
-func NewTripService(tripRepo repository.TripRepository, locationRepo repository.LocationRepository, eventPublisher event.Publisher, logger observability.Logger) *TripService {
-	return &TripService{
-		tripRepo:      tripRepo,
-		locationRepo:  locationRepo,
+func NewTripService(tripRepo repository.TripRepository, locationRepo repository.LocationRepository, eventPublisher event.Publisher, logger observability.Logger) TripService {
+	return &tripServiceImpl{
+		tripRepo:       tripRepo,
+		locationRepo:   locationRepo,
 		eventPublisher: eventPublisher,
-		logger:        logger,
+		logger:         logger,
 	}
 }
 
-func (s *TripService) StartTrip(ctx context.Context, trip *domain.Trip) error {
+func (s tripServiceImpl) StartTrip(ctx context.Context, trip *domain.Trip) error {
 	if trip == nil {
-		return errors.New("trip cannot be nil")
+		return pkgerrors.NewBadRequestError("trip cannot be nil")
 	}
 
-	// Validate trip details
-	if err := trip.Validate(); err != nil {
+	// Basic validation: require RouteID and DriverID
+	if trip.RouteID == "" || trip.DriverID == "" {
+		return pkgerrors.NewBadRequestError("route_id and driver_id are required")
+	}
+
+	trip.State = domain.CREATED
+	trip.StartTime = time.Now()
+
+	if err := s.tripRepo.CreateTrip(ctx, trip); err != nil {
 		return err
 	}
 
-	// Save trip to the repository
-	if err := s.tripRepo.Create(ctx, trip); err != nil {
-		return err
-	}
-
-	// Publish TripStarted event
-	s.eventPublisher.Publish(event.TripStarted{TripID: trip.ID})
-
+	_ = s.eventPublisher.Publish("trip.started", event.TripStarted{Event: event.Event{Timestamp: time.Now(), Type: "TripStarted"}, TripID: trip.ID})
 	return nil
 }
 
-func (s *TripService) UpdateLocation(ctx context.Context, tripID string, location *domain.Location) error {
+func (s tripServiceImpl) UpdateLocation(ctx context.Context, tripID string, location *domain.Location) error {
 	if location == nil {
-		return errors.New("location cannot be nil")
+		return pkgerrors.NewBadRequestError("location cannot be nil")
 	}
 
-	// Update location in the repository
-	if err := s.locationRepo.Update(ctx, tripID, location); err != nil {
+	// set trip association and timestamp
+	location.TripID = tripID
+	location.Timestamp = time.Now().UTC()
+
+	if err := s.locationRepo.SaveLocation(ctx, location); err != nil {
 		return err
 	}
 
-	// Publish LocationUpdated event
-	s.eventPublisher.Publish(event.LocationUpdated{TripID: tripID, Location: *location})
-
+	_ = s.eventPublisher.Publish("location.updated", event.LocationUpdated{Event: event.Event{Timestamp: time.Now(), Type: "LocationUpdated"}, TripID: tripID, Latitude: location.Latitude, Longitude: location.Longitude})
 	return nil
 }
 
-func (s *TripService) EndTrip(ctx context.Context, tripID string) error {
-	trip, err := s.tripRepo.GetByID(ctx, tripID)
+func (s tripServiceImpl) EndTrip(ctx context.Context, tripID string) error {
+	trip, err := s.tripRepo.GetTripByID(ctx, tripID)
 	if err != nil {
 		return err
 	}
-
 	if trip == nil {
-		return errors.New("trip not found")
+		return pkgerrors.NewNotFoundError("trip not found")
 	}
-
-	// End the trip
-	trip.EndedAt = time.Now()
-	if err := s.tripRepo.Update(ctx, trip); err != nil {
+	trip.EndTime = time.Now()
+	trip.State = domain.ENDED
+	if err := s.tripRepo.UpdateTrip(ctx, trip); err != nil {
 		return err
 	}
-
-	// Publish TripEnded event
-	s.eventPublisher.Publish(event.TripEnded{TripID: tripID})
-
+	_ = s.eventPublisher.Publish("trip.ended", event.TripAutoEnded{Event: event.Event{Timestamp: time.Now(), Type: "TripEnded"}, TripID: tripID})
 	return nil
 }
 
-func (s *TripService) AutoEndStaleTrips(ctx context.Context, threshold time.Duration) error {
+func (s tripServiceImpl) AutoEndStaleTrips(ctx context.Context, threshold time.Duration) error {
 	staleTrips, err := s.tripRepo.GetStaleTrips(ctx, threshold)
 	if err != nil {
 		return err
 	}
-
-	for _, trip := range staleTrips {
-		if err := s.EndTrip(ctx, trip.ID); err != nil {
-			s.logger.Error("failed to end stale trip", err)
+	for _, tr := range staleTrips {
+		if err := s.EndTrip(ctx, tr.ID); err != nil {
+			s.logger.Error("failed to end stale trip", zap.Any("error", err))
 		}
 	}
-
 	return nil
+}
+
+func (s tripServiceImpl) GetActiveTrips(ctx context.Context) ([]*domain.Trip, error) {
+	// Delegate to repository. Org scoping can be added later via context metadata.
+	return s.tripRepo.GetActiveTripsByOrgID(ctx, "")
 }

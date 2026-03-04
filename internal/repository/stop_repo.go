@@ -1,17 +1,12 @@
 package repository
 
 import (
+	"context"
+
 	"github.com/akpatri/srt/internal/domain"
+	"github.com/akpatri/srt/pkg/utils"
 	"gorm.io/gorm"
 )
-
-type StopRepository interface {
-	Create(stop *domain.Stop) error
-	Update(stop *domain.Stop) error
-	Delete(stopID string) error
-	FindByID(stopID string) (*domain.Stop, error)
-	FindAllByRouteID(routeID string) ([]domain.Stop, error)
-}
 
 type stopRepository struct {
 	db *gorm.DB
@@ -49,4 +44,28 @@ func (r *stopRepository) FindAllByRouteID(routeID string) ([]domain.Stop, error)
 		return nil, err
 	}
 	return stops, nil
+}
+
+func (r *stopRepository) FindAll(ctx context.Context) ([]domain.Stop, error) {
+	var stops []domain.Stop
+	if err := r.db.WithContext(ctx).Find(&stops).Error; err != nil {
+		return nil, err
+	}
+	return stops, nil
+}
+
+func (r *stopRepository) FindStopsWithinRadius(ctx context.Context, latitude, longitude, radius float64) ([]domain.Stop, error) {
+	// Naive implementation: load all stops and filter by distance.
+	var results []domain.Stop
+	var stops []domain.Stop
+	if err := r.db.WithContext(ctx).Find(&stops).Error; err != nil {
+		return nil, err
+	}
+
+	for _, s := range stops {
+		if utils.CalculateDistance(latitude, longitude, s.Latitude, s.Longitude) <= radius {
+			results = append(results, s)
+		}
+	}
+	return results, nil
 }

@@ -3,8 +3,8 @@ package geo
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/akpatri/srt/internal/service"
+	"github.com/gin-gonic/gin"
 )
 
 // Router handles routing for geo-related endpoints
